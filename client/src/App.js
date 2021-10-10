@@ -1,16 +1,15 @@
 import React from "react";
 import { BrowserRouter as Router, Switch, Route } from "react-router-dom";
-import { setContext } from "@apollo/client/link/context";
+import SearchBooks from "./pages/SearchBooks";
+import SavedBooks from "./pages/SavedBooks";
+import Navbar from "./components/Navbar";
 import {
   ApolloClient,
   InMemoryCache,
   ApolloProvider,
   createHttpLink,
 } from "@apollo/client";
-
-import SearchBooks from "./pages/SearchBooks";
-import SavedBooks from "./pages/SavedBooks";
-import Navbar from "./components/Navbar";
+import { setContext } from "@apollo/client/link/context";
 
 // Construct our main GraphQL API endpoint
 const httpLink = createHttpLink({
@@ -36,7 +35,6 @@ const client = new ApolloClient({
   cache: new InMemoryCache(),
 });
 
-
 function App() {
   return (
     <ApolloProvider client={client}>
@@ -53,4 +51,5 @@ function App() {
     </ApolloProvider>
   );
 }
+
 export default App;

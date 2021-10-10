@@ -1,73 +1,71 @@
-const { AuthenticationError } = require('apollo-server-express');
-const { Book, User } = require('../models');
+const { User, Book } = require('../models');
 const { signToken } = require('../utils/auth');
+const { AuthenticationError } = require('apollo-server-express');
 
-// query requests
 const resolvers = {
-  Query: {
-    // By adding context to our query, 
-    // we can retrieve the logged in user without specifically searching for them
-    me: async(parent, args, context) => {
-      if(context.user) {
-          const userData = await User.findOne({_id: context.user._id})
-          .select('-_v -password')
+    Query: {
+        me: async (parent, args, context) => {
+            if(context.user) {
+                const userData = await User.findOne({ _id: context.user._id })
+                    .select('-__v -password')
 
-          return userData;
-      }
+                return userData;
+            }
 
-      throw new AuthenticationError('You are not logged in');
-  
-  }
-},
-
-  Mutation: {
-    loginUser: async (_parent, { email, password }) => {
-      const user = await User.findOne({ email });
-
-      if (!user) {
-        throw new AuthenticationError('No profile found!');
-      }
-      const correctPw = await user.isCorrectPassword(password);
-
-      if (!correctPw) {
-        throw new AuthenticationError('Incorrect info!');
-      }
-      const token = signToken(user);
-      return { token, user };
+            throw new AuthenticationError('Not logged in');
+        }
     },
 
-    addUser: async (_parent, { username, email, password }) => {
-      const user = await User.create({ username, email, password });
-      const token = signToken(user);
+    Mutation: {
 
-      return { token, user };
-    },
+        login: async (parent, { email, password }) => {
+            const user = await User.findOne({ email });
 
-    saveBook: async (_parent, { input }, context) => {
-      // If context has a `user` property, that means the user executing this mutation has a valid JWT and is logged in
-      if (context.user) {
-        return User.findOneAndUpdate(
-          { _id: context.user._id },
-          {
-            $addToSet: { savedBooks: input },
-          },
-          { new: true }
-        )
-      }
-      throw new AuthenticationError('You need to be logged in!');
-    },
+            if (!user) {
+                throw new AuthenticationError('Incorrect credentials');
+            }
 
-    removeBook: async (_parent, { bookId }, context) => {
-      if (context.user) {
-        return User.findOneAndUpdate(
-          { _id: context.user._id },
-          { $pull: { savedBooks: { bookId: bookId } } },
-          { new: true }
-        );
-      }
-      throw new AuthenticationError('You need to be logged in!');
-    },
-  }
+            const correctPw = await user.isCorrectPassword(password);
+
+            if (!correctPw) {
+                throw new AuthenticationError('Incorrect credentials');
+            }
+
+            const token = signToken(user);
+            return { token, user };
+        },
+
+        addUser: async (parent, args) => {
+            const user = await User.create(args);
+            const token = signToken(user);
+
+            return { token, user };
+        },
+
+        saveBook: async (parent, { input }, context) => {
+            if (context.user) {
+                const updatedUser = await User.findByIdAndUpdate(
+                    { _id: context.user._id },
+                    { $addToSet: { savedBooks: input } },
+                    { new: true }
+                );
+                return updatedUser;
+            }
+            throw new AuthenticationError('You need to be logged in!')
+        },
+
+        removeBook: async (parent, args, context) => {
+            if (context.user) {
+                const updatedUser = await User.findOneAndUpdate(
+                    { _id: context.user._id },
+                    { $pull: { savedBooks: { bookId: args.bookId } } },
+                    { new: true }
+                );
+                return updatedUser;
+            }
+            throw new AuthenticationError('You need to be logged in!')
+        }
+    }
 };
 
 module.exports = resolvers;
